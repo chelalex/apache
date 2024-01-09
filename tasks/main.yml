@@ -1,0 +1,51 @@
+---
+# tasks file for apache
+
+- name: Apache | Install Apache packets
+  ansible.builtin.apt:
+    pkg: apache2
+    state: present
+    update_cache: true
+  become: true
+
+- name: Apache | Activate Apache modules
+  ansible.builtin.shell: "a2enmod {{ item }}"
+  loop: "{{ apache.modules }}"
+  become: true
+
+- name: Apache | Copy Apache main config
+  ansible.builtin.template:
+    src: "{{ apache.main_config }}.j2"
+    dest: "{{ apache.main_config_path }}{{ apache.main_config }}"
+    owner: root
+    mode: 0644
+  become: true
+
+- name: Apache | Create certificate directory
+  ansible.builtin.file:
+    path: "{{ apache.main_config_path }}{{ apache.cert_directory }}"
+    state: directory
+    owner: root
+    mode: 0755
+  become: true
+
+- name: Apache | Generate openssl certificate
+  ansible.builtin.shell: 'openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out apache-certificate.crt -keyout apache.key -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN={{ ansible_host }}"'
+  args:
+    chdir: "{{ apache.main_config_path }}{{ apache.cert_directory }}"
+    creates: "{{ apache.main_config_path }}apache-certificate.crt"
+  become: true
+
+- name: Apache | Create Apache virtual host config
+  ansible.builtin.template:
+    src: "{{ apache.virtual_host_config }}.j2"
+    dest: "{{ apache.virtual_host_config_path }}{{ apache.virtual_host_config }}"
+    owner: root
+    mode: 0644
+  become: true
+
+- name: Apache | Start Apache service
+  ansible.builtin.systemd:
+    name: apache2.service
+    state: started
+  become: true

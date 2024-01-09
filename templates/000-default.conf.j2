@@ -1,0 +1,8 @@
+{% for virtual_host in apache.virtual_hosts %} #здесь идет цикл по списку параметров для создания тегов <VirtualHost>, включая тот, что в ручном гайде (см virtual_hosts)
+<VirtualHost {{ virtual_host.address }}>
+{% for option in virtual_host.options %}
+	{{ option.name }} {{ option.value }}
+{% endfor %}
+</VirtualHost>
+
+{% endfor %}
